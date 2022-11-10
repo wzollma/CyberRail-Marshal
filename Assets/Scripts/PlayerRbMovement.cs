@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using DG.Tweening;
 
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(PlayerRbInput))]
@@ -97,7 +98,8 @@ public class PlayerRbMovement : MonoBehaviour
 
     public void resetYScale()
     {
-        setYScale(startYScale);
+        //setYScale(startYScale);
+        transform.DOScaleY(startYScale, .1f);
     }
 
     public void setYScale(float newYScale)
@@ -214,11 +216,19 @@ public class PlayerRbMovement : MonoBehaviour
         else if (grounded && input.isSprint) // Mode - Sprinting
         {
             state = MovementState.SPRINTING;
-            setDesiredMoveSpeed(sprintSpeed);
+
+            if (moveSpeed < sprintSpeed)
+                moveSpeed = sprintSpeed;
+            setDesiredMoveSpeed(sprintSpeed);            
         }
         else if (grounded) // Mode - Walking
         {
             state = MovementState.WALKING;
+
+            if (moveSpeed < walkSpeed)
+                moveSpeed = walkSpeed;
+            else if (moveSpeed == sprintSpeed)
+                moveSpeed = walkSpeed;
             setDesiredMoveSpeed(walkSpeed);
         }
         else // Mode - Air
