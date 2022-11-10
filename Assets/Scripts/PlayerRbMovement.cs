@@ -49,6 +49,7 @@ public class PlayerRbMovement : MonoBehaviour
 
     Rigidbody rb;
     PlayerRbInput input;
+    PlayerCam cam;
 
     public MovementState state;
     public enum MovementState { WALKING, SPRINTING, WALLRUNNING, CROUCHING, SLIDING, AIR }
@@ -61,6 +62,7 @@ public class PlayerRbMovement : MonoBehaviour
 
     private void Start()
     {
+        cam = Camera.main.GetComponent<PlayerCam>();
         input = GetComponent<PlayerRbInput>();
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
@@ -335,6 +337,8 @@ public class PlayerRbMovement : MonoBehaviour
             moveSpeed = isState(MovementState.CROUCHING) ? crouchSpeed : walkSpeed;
             lastDesiredMoveSpeed = moveSpeed;
         }
+
+        cam.DoIncFov(0);
     }
 
     IEnumerator SmoothlyLerpMoveSpeed(float changeModifier)

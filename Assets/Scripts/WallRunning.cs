@@ -27,6 +27,7 @@ public class WallRunning : MonoBehaviour
     float exitWallTimer;
 
     [Header("References")]
+    PlayerCam cam;
     PlayerRbMovement movementScript;
     PlayerRbInput input;
     Rigidbody rb;
@@ -37,6 +38,7 @@ public class WallRunning : MonoBehaviour
         movementScript = GetComponent<PlayerRbMovement>();
         input = GetComponent<PlayerRbInput>();
         rb = GetComponent<Rigidbody>();
+        cam = Camera.main.GetComponent<PlayerCam>();
     }
 
     // Update is called once per frame
@@ -108,6 +110,9 @@ public class WallRunning : MonoBehaviour
         movementScript.wallRunning = true;
 
         wallRunTimer = maxWallRunTime;
+
+        // apply camera effects
+        cam.toggleWallRunEffects(true, wallLeft, wallRight);
     }
 
     void WallRunningMovement()
@@ -134,6 +139,9 @@ public class WallRunning : MonoBehaviour
     void StopWallRun()
     {
         movementScript.wallRunning = false;
+
+        // reset camera effects
+        cam.toggleWallRunEffects(false, wallLeft, wallRight);
     }
 
     void WallJump()
