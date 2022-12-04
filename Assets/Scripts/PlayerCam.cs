@@ -17,6 +17,7 @@ public class PlayerCam : MonoBehaviour
     Vector2 curRot;
     float startFov;
     float lastSetFovInc;
+    float scopeFOVModifier = 1; // set to either 1 or like .5 depending on if the player is scoping or not
     
     void Start()
     {
@@ -30,8 +31,8 @@ public class PlayerCam : MonoBehaviour
     void Update()
     {
         // get mouse input
-        float mouseX = Input.GetAxisRaw("Mouse X") * Time.deltaTime * sensitivity.x;
-        float mouseY = Input.GetAxisRaw("Mouse Y") * Time.deltaTime * sensitivity.y;
+        float mouseX = Input.GetAxisRaw("Mouse X") * sensitivity.x;
+        float mouseY = Input.GetAxisRaw("Mouse Y") * sensitivity.y;
 
         curRot.y += mouseX;
 
@@ -72,10 +73,17 @@ public class PlayerCam : MonoBehaviour
         return lastSetFovInc;
     }
 
-    void DoFov(float endValue)
+    public void DoFov(float endValue)
     {
+        endValue *= scopeFOVModifier;
+
         GetComponent<Camera>().DOFieldOfView(endValue, 0.25f);
         lastSetFovInc = endValue - startFov;
+    }
+
+    public void setScopeFOVModifier(float modifier)
+    {
+        scopeFOVModifier = modifier;
     }
 
     void DoTilt(float zTilt)

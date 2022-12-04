@@ -26,11 +26,18 @@ public class WallRunning : MonoBehaviour
     public float exitWallTime;
     float exitWallTimer;
 
-    [Header("References")]
+    //[Header("References")]
     PlayerCam cam;
     PlayerRbMovement movementScript;
     PlayerRbInput input;
     Rigidbody rb;
+
+    Vector3 wallForward;
+    float speedAtStartWallRun;
+    float lastTimeWallRunning;
+    WallRunInfo lastWallRunInfo;
+
+    //[HideInInspector] public 
 
     // Start is called before the first frame update
     void Start()
@@ -56,8 +63,24 @@ public class WallRunning : MonoBehaviour
 
     void CheckForWall()
     {
-        wallRight = Physics.Raycast(transform.position, input.orientation.right, out rightWallHit, wallCheckDistance, whatIsWall);
-        wallLeft = Physics.Raycast(transform.position, -input.orientation.right, out leftWallHit, wallCheckDistance, whatIsWall);
+        //RaycastHit hitInfo;
+
+        //Debug.Log("right raycast");
+        wallRight = testWallRayCast(input.orientation.right, out rightWallHit);
+        //wallRight = wallRight || testWallRayCast((input.orientation.right * 2 + input.orientation.forward).normalized, out rightWallHit);
+        wallRight = wallRight || testWallRayCast((input.orientation.right * 2 - input.orientation.forward).normalized, out rightWallHit);
+
+        //Debug.Log("left raycast");
+        wallLeft = testWallRayCast(-input.orientation.right, out leftWallHit);
+        //wallLeft = wallLeft || testWallRayCast((-input.orientation.right * 2 + input.orientation.forward).normalized, out leftWallHit);
+        wallLeft = wallLeft || testWallRayCast((-input.orientation.right * 2 - input.orientation.forward).normalized, out leftWallHit);
+    }
+
+    bool testWallRayCast(Vector3 dir, out RaycastHit hitInfo)
+    {
+        bool ret = Physics.Raycast(transform.position, dir, out hitInfo, wallCheckDistance, whatIsWall);
+        //Debug.Log($"ret: {ret}    hit: {hitInfo}");
+        return ret;
     }
 
     bool AboveGround()
@@ -68,10 +91,19 @@ public class WallRunning : MonoBehaviour
     void StateMachine()
     {
         // State 1 - Wallrunning
-        if ((wallLeft || wallRight) && input.moveInput.y > 0 && AboveGround() && !exitingWall)
+        if (isWallRunning())
         {
             if (!movementScript.wallRunning)
+            {
+                Collider wallToJumpOnCollider = wallRight ? rightWallHit.collider : leftWallHit.collider;
+                Vector3 wallToJumpOnNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
+
+                if (lastWallRunInfo != null && wallToJumpOnCollider != null && wallToJumpOnNormal != null && lastWallRunInfo.Equals(new WallRunInfo(wallToJumpOnCollider, wallToJumpOnNormal)))
+                //if (lastWallRunInfo != null && lastWallRunInfo.matchesWallCollider(wallToJumpOnCollider))
+                    return;
+
                 StartWallRun();
+            }                
 
             // wallrun timer
             if (wallRunTimer > 0)
@@ -100,6 +132,7 @@ public class WallRunning : MonoBehaviour
         }
         else // State 3 - None
         {
+            // NOTE: if anything more is adding in State 3, make sure those are added to the return; case of State 1
             if (movementScript.wallRunning)
                 StopWallRun();
         }
@@ -107,37 +140,83 @@ public class WallRunning : MonoBehaviour
 
     void StartWallRun()
     {
+        //Debug.Log("StartWallRun()");
         movementScript.wallRunning = true;
 
         wallRunTimer = maxWallRunTime;
 
         // apply camera effects
         cam.toggleWallRunEffects(true, wallLeft, wallRight);
+
+        speedAtStartWallRun = movementScript.getFlatVelocity().magnitude;
+        if (speedAtStartWallRun < movementScript.walkSpeed)
+            speedAtStartWallRun = movementScript.walkSpeed;
     }
 
     void WallRunningMovement()
     {
         rb.useGravity = false;
-        rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+        rb.velocity = Vector3.zero;//new Vector3(rb.velocity.x, 0f, rb.velocity.z);
 
-        Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
+        RaycastHit hitInfoToUse = wallRight ? rightWallHit : leftWallHit;
+        Vector3 wallNormal = hitInfoToUse.normal;
+        //Debug.Log($"wallNormal: {wallNormal}");
 
-        Vector3 wallForward = Vector3.Cross(wallNormal, transform.up);
+        Vector3 potentialWallForward = Vector3.Cross(wallNormal, Vector3.up);
+        if (potentialWallForward.Equals(Vector3.zero))
+        {
+            Debug.Log("Cross is (0,0,0)");
+            return;
+        }
+
+        wallForward = potentialWallForward;
 
         // makes the player wallRun in the direction they're facing
-        if ((input.orientation.forward - wallForward).magnitude > (input.orientation.forward - -wallForward).magnitude)
+        if ((forwardDirecForWallRunning() - wallForward).magnitude > (forwardDirecForWallRunning() - -wallForward).magnitude)
             wallForward = -wallForward;
 
-        // forward force
-        rb.AddForce(wallForward * wallRunForce, ForceMode.Force);
+        //Debug.Log($"setting wallForward: {wallForward}");
 
-        // push player toward wall they are trying to run on
-        if (!(wallLeft && input.moveInput.x > 0) && !(wallRight && input.moveInput.x < 0))
+        // forward force
+        //Debug.Log("force - wall running");
+        float speedToWallRunAt = movementScript.getMoveSpeed() <= 0 ? movementScript.walkSpeed / 2 : movementScript.getMoveSpeed();
+        rb.AddForce(wallForward * wallRunForce * speedToWallRunAt, ForceMode.Force);
+
+        // push player toward wall they are trying to run on        
+        if (isWallRunning())
+        {
+            //Debug.Log("force - pushing toward wall running on");
             rb.AddForce(-wallNormal * 100, ForceMode.Force);
+            //Debug.Log("pushing to wall");
+            
+            lastTimeWallRunning = Time.time;
+            lastWallRunInfo = new WallRunInfo(hitInfoToUse.collider, wallNormal);
+        }
+        else
+        {
+            //exitingWall = true;
+            //exitWallTimer = exitWallTime;
+            //Debug.Log($"{Time.deltaTime} falling off");
+
+
+        }
+    }
+
+    bool isFastEnoughToWallRun()
+    {
+        float SPEED_EPSILON = 6f;
+        float velAbs = Mathf.Abs(movementScript.getFlatVelocity().magnitude);
+        return velAbs > SPEED_EPSILON;
+    }
+
+    bool canAngleStayInWallRun(Vector3 wallNormal, Vector3 wallForward)
+    {
+        return true;
     }
 
     void StopWallRun()
     {
+        //Debug.Log("StopWallRun()");
         movementScript.wallRunning = false;
 
         // reset camera effects
@@ -156,6 +235,66 @@ public class WallRunning : MonoBehaviour
 
         // reset y velocity and add force
         rb.velocity = movementScript.getFlatVelocity();
+        //Debug.Log("force - wall jumping");
         rb.AddForce(forceToApply, ForceMode.Impulse);
+
+        //Debug.Log("wall jumping");
+    }
+
+    Vector3 forwardDirecForWallRunning()
+    {
+        return input.orientation.forward;
+    }
+
+    public bool isWallRunning()
+    {
+        return (wallLeft || wallRight) && AboveGround() && !exitingWall && input.moveInput.magnitude > 0/* && input.moveInput.y > 0 && isFastEnoughToWallRun()*/;
+    }
+
+    public void resetLastWallRunInfo()
+    {
+        lastWallRunInfo = null;
+    }
+
+    private void OnDrawGizmos()
+    {
+        //if (input == null)
+        //    Start();
+
+        //Gizmos.DrawLine(transform.position, transform.position + forwardDirecForWallRunning() * 2);
+
+        Gizmos.DrawLine(transform.position, transform.position + wallForward * 2);
+    }
+}
+
+public class WallRunInfo
+{
+    public Collider wallCollider;
+    public Vector3 wallNormal;
+
+    public WallRunInfo(Collider wallCollider, Vector3 wallNormal)
+    {
+        this.wallCollider = wallCollider;
+        this.wallNormal = wallNormal;
+    }
+
+    public bool matchesWallCollider(Collider otherWallCollider)
+    {
+        return wallCollider != null && wallCollider.Equals(otherWallCollider);
+    }
+
+    public override bool Equals(object obj)
+    {
+        if (!(obj is WallRunInfo))
+            return false;
+
+        WallRunInfo other = obj as WallRunInfo;
+
+        return wallCollider.Equals(other.wallCollider) && wallNormal.Equals(other.wallNormal);
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
     }
 }

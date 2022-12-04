@@ -73,12 +73,14 @@ public class Sliding : MonoBehaviour
         // sliding normal
         if (!movementScript.OnSlope() || rb.velocity.y > -PlayerRbMovement.Y_VEL_EPSILON)
         {
+            //Debug.Log("force - sliding");
             rb.AddForce(inputDirection * slideForce, ForceMode.Force);
 
             timeSliding += Time.deltaTime;
         }
         else // sliding down a slope
         {
+            //Debug.Log("force - sliding down slope");
             rb.AddForce(movementScript.GetSlopeMoveDirection(inputDirection) * slideForce, ForceMode.Force);
         }
 

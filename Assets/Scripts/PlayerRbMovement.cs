@@ -51,6 +51,7 @@ public class PlayerRbMovement : MonoBehaviour
     Rigidbody rb;
     PlayerRbInput input;
     PlayerCam cam;
+    WallRunning wallRunScript;
 
     public MovementState state;
     public enum MovementState { WALKING, SPRINTING, WALLRUNNING, CROUCHING, SLIDING, AIR }
@@ -67,6 +68,7 @@ public class PlayerRbMovement : MonoBehaviour
         input = GetComponent<PlayerRbInput>();
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
+        wallRunScript = GetComponent<WallRunning>();
 
         ResetJump();
 
@@ -86,7 +88,10 @@ public class PlayerRbMovement : MonoBehaviour
 
         // handle drag
         if (grounded)
+        {
             rb.drag = groundDrag;
+            wallRunScript.resetLastWallRunInfo();
+        }
         else
             rb.drag = 0;
     }
@@ -110,6 +115,7 @@ public class PlayerRbMovement : MonoBehaviour
 
     public void pressPlayerToGround()
     {
+        Debug.Log("force - being pressed to ground");
         rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
     }
 
@@ -246,7 +252,7 @@ public class PlayerRbMovement : MonoBehaviour
         if (Mathf.Abs(desiredMoveSpeed - lastDesiredMoveSpeed) > SPEED_DIFF_LERP_THRESHOLD)
         {            
             StopAllCoroutines();
-            StartCoroutine(SmoothlyLerpMoveSpeed(desiredMoveSpeed == 0 ? 10 : 1));
+            StartCoroutine(SmoothlyLerpMoveSpeed(desiredMoveSpeed == 0 ? 10 : (desiredMoveSpeed < moveSpeed ? 3 : 1)));
         }
         else
         {
@@ -262,19 +268,33 @@ public class PlayerRbMovement : MonoBehaviour
         moveDirection = input.getInputDirection();
 
         // on slope
-        if (OnSlope() && !exitingSlope)
+        if (!wallRunning && OnSlope() && !exitingSlope)
         {
+            //Debug.Log("force - moving on slope");
             rb.AddForce(GetSlopeMoveDirection(moveDirection) * moveSpeed * 20f, ForceMode.Force);
 
             if (isGoingDownSlope())
+            {
+                //Debug.Log("force - moving down slope");
                 rb.AddForce(Vector3.down * 80f, ForceMode.Force);
+            }                
         }
 
         // on ground
-        if (grounded)
+        if (wallRunning)
+        {
+
+        }
+        else if (grounded)
+        {
+            //Debug.Log("force - moving on ground");
             rb.AddForce(moveDirection.normalized * moveSpeed * 10f, ForceMode.Force);
+        }
         else if (!grounded) // in air
-            rb.AddForce(moveDirection.normalized * moveSpeed * 10f * airMultiplier, ForceMode.Force);            
+        {
+            //Debug.Log("force - moving in air");
+            rb.AddForce(moveDirection.normalized * moveSpeed * 10f * airMultiplier, ForceMode.Force);
+        }
 
         SpeedControl();
 
@@ -326,6 +346,7 @@ public class PlayerRbMovement : MonoBehaviour
         // reset y velocity
         rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
 
+        //Debug.Log("force - jumping");
         rb.AddForce(transform.up * jumpForce * heightMultiplier, ForceMode.Impulse);
     }
 
