@@ -30,7 +30,9 @@ public class PlayerRbMovement : MonoBehaviour
     public float jumpForce;
     public float jumpCooldown;
     public float airMultiplier;
+    [SerializeField] int maxAirJumps = 1;
     bool readyToJump;
+    int airJumpsLeft;
 
     [Header("Crouching")]
     public float crouchSpeed;
@@ -88,8 +90,15 @@ public class PlayerRbMovement : MonoBehaviour
         // ground check
         bool prevGrounded = grounded;
         grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * .5f + .2f, whatIsGround);
-        if (grounded && (!prevGrounded || (sliding && !isState(MovementState.SLIDING))))
-            timeGroundedSlideStarted = Time.time;
+        if (grounded)
+        {
+            if (!prevGrounded)
+                airJumpsLeft = maxAirJumps;
+
+            if ((!prevGrounded || (sliding && !isState(MovementState.SLIDING))))
+                timeGroundedSlideStarted = Time.time;
+        }
+            
 
         HandleInput();
         StateHandler();
@@ -185,7 +194,7 @@ public class PlayerRbMovement : MonoBehaviour
     private void HandleInput()
     {
         // when to jump
-        if (input.isJump && readyToJump && grounded)
+        if (readyToJump && ((grounded && input.isJump) || (airJumpsLeft > 0 && input.jumpDown)))
         {
             readyToJump = false;
 
@@ -365,6 +374,9 @@ public class PlayerRbMovement : MonoBehaviour
             if (Time.time - timeGroundedSlideStarted >= .2f)
                 heightMultiplier *= 1.5f;
         }
+
+        if (!grounded)
+            airJumpsLeft--;
 
         exitingSlope = true;
 
