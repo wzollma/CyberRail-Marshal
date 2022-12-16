@@ -52,7 +52,7 @@ public class PlayerRbMovement : MonoBehaviour
 
     Vector3 moveDirection;
 
-    Rigidbody rb;
+    [HideInInspector] public Rigidbody rb;
     PlayerRbInput input;
     PlayerCam cam;
     WallRunning wallRunScript;
@@ -70,7 +70,7 @@ public class PlayerRbMovement : MonoBehaviour
     // grappling
     public bool activeGrapple;
     Vector3 velocityToSet;
-    bool enableMovementOnNextTouch;
+    [HideInInspector] public bool enableMovementOnNextTouch;
 
     private void Start()
     {
@@ -219,21 +219,7 @@ public class PlayerRbMovement : MonoBehaviour
 
     void StateHandler()
     {
-        // Mode - Grappling
-        if (activeGrapple)
-        {
-            if (!isState(MovementState.GRAPPLING))
-            {
-                if (isState(MovementState.SLIDING) || sliding)
-                    StopSlide();
-
-                if (isState(MovementState.WALLRUNNING) || wallRunning)
-                    wallRunScript.StopWallRun();
-            }
-
-            state = MovementState.GRAPPLING;
-        }
-        else if (wallRunning) // Mode - Wallrunning
+        if (wallRunning) // Mode - Wallrunning
         {
             state = MovementState.WALLRUNNING;
             moveSpeed = wallRunScript.speedAtStartWallRun;
@@ -266,6 +252,19 @@ public class PlayerRbMovement : MonoBehaviour
             state = MovementState.CROUCHING;
             setDesiredMoveSpeed(crouchSpeed);
         }        
+        else if (activeGrapple) // Mode - Grappling
+        {
+            if (!isState(MovementState.GRAPPLING))
+            {
+                if (isState(MovementState.SLIDING) || sliding)
+                    StopSlide();
+
+                if (isState(MovementState.WALLRUNNING) || wallRunning)
+                    wallRunScript.StopWallRun();
+            }
+
+            state = MovementState.GRAPPLING;
+        }
         else if (grounded && input.isSprint) // Mode - Sprinting
         {
             state = MovementState.SPRINTING;
@@ -477,8 +476,8 @@ public class PlayerRbMovement : MonoBehaviour
     
     void setVelocity()
     {
-        enableMovementOnNextTouch = true;
-        rb.velocity = velocityToSet;
+        //enableMovementOnNextTouch = true;
+        //rb.velocity = velocityToSet;
     }
 
     public void resetRestrictions()
@@ -491,23 +490,30 @@ public class PlayerRbMovement : MonoBehaviour
     /// </summary>
     public void processGetOutOfGrappleState()
     {
-        if (isState(MovementState.GRAPPLING) || activeGrapple)
-        {
-            grappleScript.stopGrapple();
-            resetRestrictions();
-        }
-    }
+        //if (isState(MovementState.GRAPPLING) || activeGrapple)
+        //{
+        //    Debug.Log("getting out - in script");
+        //}
 
-    void OnCollisionEnter(Collision collision)
-    {
-        if(enableMovementOnNextTouch)
+        if (enableMovementOnNextTouch)
         {
+            resetRestrictions();
+            Debug.Log("getting out/* - out of script*/");
+            grappleScript.stopGrapple();
             enableMovementOnNextTouch = false;
-            resetRestrictions();
-
-            grappleScript.stopGrapple();
         }
     }
+
+    //void OnCollisionEnter(Collision collision)
+    //{
+    //    if(enableMovementOnNextTouch)
+    //    {
+    //        enableMovementOnNextTouch = false;
+    //        resetRestrictions();
+
+    //        grappleScript.stopGrapple();
+    //    }
+    //}
 
     public Vector3 calculateJumpVelocity(Vector3 startPoint, Vector3 endPoint, float trajectoryHeight)
     {

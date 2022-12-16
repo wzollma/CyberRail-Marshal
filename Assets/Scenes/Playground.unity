@@ -1817,9 +1817,11 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 513
   maxSlopeAngle: 40
+  rb: {fileID: 0}
   state: 0
   wallRunning: 0
   activeGrapple: 0
+  enableMovementOnNextTouch: 0
 --- !u!114 &1843178444
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1924,7 +1926,9 @@ MonoBehaviour:
   maxGrappleDistance: 35
   grappleDelayTime: 0.25
   overshootYAxis: 2
-  RELEASE_EPSILON: 1
+  releaseDistance: 2
+  grappleSpeed: 10
+  canGrappleJump: 1
   grapplingCd: 1
 --- !u!1001 &1979352518
 PrefabInstance:

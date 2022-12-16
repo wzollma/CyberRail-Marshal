@@ -15,7 +15,9 @@ public class Grappling : MonoBehaviour
     [SerializeField] float maxGrappleDistance;
     [SerializeField] float grappleDelayTime;
     [SerializeField] float overshootYAxis;
-    public float RELEASE_EPSILON = 1;
+    [SerializeField] float releaseDistance = 1;
+    [SerializeField] float grappleSpeed = 10;
+    Vector3 grappleDirec;
     public bool canGrappleJump = true;
 
     Vector3 grapplePoint;
@@ -42,6 +44,26 @@ public class Grappling : MonoBehaviour
             grapplingCdTimer -= Time.deltaTime; 
     }
 
+    void FixedUpdate()
+    {
+        if (movementScript.enableMovementOnNextTouch || grappling)
+        {
+            Debug.Log("setting force");
+            movementScript.rb.AddForce(grappleDirec * grappleSpeed * 20, ForceMode.VelocityChange);
+        }
+        else
+        {
+            movementScript.enableMovementOnNextTouch = false;
+            if (grappling)
+            {
+                if (movementScript.isState(PlayerRbMovement.MovementState.GRAPPLING))
+                    movementScript.processGetOutOfGrappleState();
+                else
+                    stopGrapple();
+            }
+        }
+    }
+
     void startGrapple()
     {
         if (grapplingCdTimer > 0)
@@ -55,6 +77,7 @@ public class Grappling : MonoBehaviour
             grapplePoint = hit.point;
 
             Invoke(nameof(executeGrapple), grappleDelayTime);
+            //StartCoroutine(executeGrapple());
         }
         else
         {
@@ -66,15 +89,48 @@ public class Grappling : MonoBehaviour
 
     void executeGrapple()
     {
-        Vector3 lowestPoint = new Vector3(transform.position.x, transform.position.y - 1f, transform.position.z);
+        //Debug.Log("executing grapple");
+        //// waits for animation
+        //yield return new WaitForSeconds(grappleDelayTime);
 
-        float grapplePointRelativeYPos = grapplePoint.y - lowestPoint.y;
-        float highestPointOnArc = grapplePointRelativeYPos + overshootYAxis;
+        Vector3 grappleDirec = (grapplePoint - getGrappleShootPoint()).normalized;
+        movementScript.enableMovementOnNextTouch = true;
+        movementScript.rb.AddForce(grappleDirec * grappleSpeed * 30, ForceMode.VelocityChange);
+        //bool doneOnce = false;
+        //while (grappling && Vector3.Distance(getGrappleShootPoint(), grapplePoint) > releaseDistance)
+        //{
+        //    //movementScript.rb.useGravity = true;            
+        //    if (!doneOnce)
+        //    {
+        //        movementScript.enableMovementOnNextTouch = true;
+        //    }
+        //        movementScript.rb.AddForce(grappleDirec * grappleSpeed * 30, ForceMode.Acceleration);
+        //    if (!movementScript.rb.useGravity)
+        //        Debug.Log("no gravity");
+        //    doneOnce = true;
+        //    yield return null;
+        //}
 
-        if (grapplePointRelativeYPos < 0)
-            highestPointOnArc = overshootYAxis;
+        //Debug.Log("stopped grapple");
+        //movementScript.enableMovementOnNextTouch = false;
+        //if (grappling)
+        //{
+        //    if (movementScript.isState(PlayerRbMovement.MovementState.GRAPPLING))
+        //        movementScript.processGetOutOfGrappleState();
+        //    else
+        //        stopGrapple();
+        //}
+        //movementScript.rb.useGravity = true;
 
-        movementScript.jumpToPosition(grapplePoint, highestPointOnArc);
+        //Vector3 lowestPoint = new Vector3(transform.position.x, transform.position.y - 1f, transform.position.z);
+
+        //float grapplePointRelativeYPos = grapplePoint.y - lowestPoint.y;
+        //float highestPointOnArc = grapplePointRelativeYPos + overshootYAxis;
+
+        //if (grapplePointRelativeYPos < 0)
+        //    highestPointOnArc = overshootYAxis;
+
+        //movementScript.jumpToPosition(grapplePoint, highestPointOnArc);
 
         Invoke(nameof(stopGrapple), 1f);
     }
