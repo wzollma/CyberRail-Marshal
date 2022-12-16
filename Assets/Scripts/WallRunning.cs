@@ -33,7 +33,7 @@ public class WallRunning : MonoBehaviour
     Rigidbody rb;
 
     Vector3 wallForward;
-    float speedAtStartWallRun;
+    public float speedAtStartWallRun;
     float lastTimeWallRunning;
     WallRunInfo lastWallRunInfo;
 
@@ -147,8 +147,11 @@ public class WallRunning : MonoBehaviour
 
         // apply camera effects
         cam.toggleWallRunEffects(true, wallLeft, wallRight);
-
-        speedAtStartWallRun = movementScript.getFlatVelocity().magnitude;
+        RaycastHit hitInfoToUse = wallRight ? rightWallHit : leftWallHit;
+        Vector3 wallNormal = hitInfoToUse.normal;        
+        speedAtStartWallRun = Vector3.Project(rb.velocity, Vector3.Cross(wallNormal, Vector3.up)).magnitude;//movementScript.getFlatVelocity().magnitude;
+        if (movementScript.activeGrapple)
+            speedAtStartWallRun *= .5f;
         if (speedAtStartWallRun < movementScript.walkSpeed)
             speedAtStartWallRun = movementScript.walkSpeed;
     }

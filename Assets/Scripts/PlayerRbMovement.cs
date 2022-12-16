@@ -5,6 +5,7 @@ using DG.Tweening;
 
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(PlayerRbInput))]
+[RequireComponent(typeof(Grappling))]
 public class PlayerRbMovement : MonoBehaviour
 {
     public const float Y_VEL_EPSILON = .1f;
@@ -52,6 +53,7 @@ public class PlayerRbMovement : MonoBehaviour
     PlayerRbInput input;
     PlayerCam cam;
     WallRunning wallRunScript;
+    Grappling grappleScript;
 
     public MovementState state;
     public enum MovementState { WALKING, SPRINTING, WALLRUNNING, CROUCHING, SLIDING, AIR }
@@ -62,6 +64,11 @@ public class PlayerRbMovement : MonoBehaviour
     public bool wallRunning;
     float timeGroundedSlideStarted;
 
+    // grappling
+    public bool activeGrapple;
+    Vector3 velocityToSet;
+    bool enableMovementOnNextTouch;
+
     private void Start()
     {
         cam = Camera.main.GetComponent<PlayerCam>();
@@ -69,6 +76,7 @@ public class PlayerRbMovement : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
         wallRunScript = GetComponent<WallRunning>();
+        grappleScript = GetComponent<Grappling>();
 
         ResetJump();
 
@@ -87,7 +95,7 @@ public class PlayerRbMovement : MonoBehaviour
         StateHandler();
 
         // handle drag
-        if (grounded)
+        if (grounded && !activeGrapple)
         {
             rb.drag = groundDrag;
             wallRunScript.resetLastWallRunInfo();
@@ -98,6 +106,15 @@ public class PlayerRbMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
+        //if (enableMovementOnNextTouch)
+        //{
+        //    if (Vector3.Distance(transform.position, grappleScript.getGrapplePoint()) <= grappleScript.RELEASE_EPSILON)
+        //    {
+        //        enableMovementOnNextTouch = false;
+        //        resetRestrictions();
+        //    }
+        //}
+
         MovePlayer();
     }
 
@@ -192,10 +209,12 @@ public class PlayerRbMovement : MonoBehaviour
 
     void StateHandler()
     {
-        // Mode - Wallrunning
-        if (wallRunning)
+        if (wallRunning) // Mode - Wallrunning
         {
             state = MovementState.WALLRUNNING;
+            moveSpeed = wallRunScript.speedAtStartWallRun;
+            if (moveSpeed > wallRunSpeed)
+                moveSpeed = wallRunSpeed;
             setDesiredMoveSpeed(wallRunSpeed);
         }        
         else if (sliding) // Mode - Sliding
@@ -235,7 +254,7 @@ public class PlayerRbMovement : MonoBehaviour
                 moveSpeed = walkSpeed;
             else if (moveSpeed == sprintSpeed)
                 moveSpeed = walkSpeed;
-            setDesiredMoveSpeed(walkSpeed);
+            setDesiredMoveSpeed(input.isMovement ? walkSpeed : 0);
         }
         else // Mode - Air
         {
@@ -264,6 +283,12 @@ public class PlayerRbMovement : MonoBehaviour
 
     void MovePlayer()
     {
+        // turn gravity off while on slope
+        rb.useGravity = !OnSlope();
+
+        if (activeGrapple)
+            return;
+
         // calc movement direction
         moveDirection = input.getInputDirection();
 
@@ -297,13 +322,13 @@ public class PlayerRbMovement : MonoBehaviour
         }
 
         SpeedControl();
-
-        // turn gravity off while on slope
-        rb.useGravity = !OnSlope();
     }
 
     void SpeedControl()
     {
+        if (activeGrapple)
+            return;
+
         // limiting speed on slope
         if (OnSlope() && !exitingSlope)
         {
@@ -401,6 +426,52 @@ public class PlayerRbMovement : MonoBehaviour
         }
 
         moveSpeed = desiredMoveSpeed;
+    }
+
+    public void jumpToPosition(Vector3 targetPosition, float trajectoryHeight)
+    {
+        activeGrapple = true;
+
+
+        velocityToSet = calculateJumpVelocity(transform.position, targetPosition, trajectoryHeight);
+        Invoke(nameof(setVelocity), 0.1f);
+
+        Invoke(nameof(resetRestrictions), 3f);
+    }
+    
+    void setVelocity()
+    {
+        enableMovementOnNextTouch = true;
+        rb.velocity = velocityToSet;
+    }
+
+    public void resetRestrictions()
+    {
+        activeGrapple = false;
+    }
+
+    void OnCollisionEnter(Collision collision)
+    {
+        if(enableMovementOnNextTouch)
+        {
+            enableMovementOnNextTouch = false;
+            resetRestrictions();
+
+            grappleScript.stopGrapple();
+        }
+    }
+
+    public Vector3 calculateJumpVelocity(Vector3 startPoint, Vector3 endPoint, float trajectoryHeight)
+    {
+        float gravity = Physics.gravity.y;
+        float displacementY = endPoint.y - startPoint.y;
+        Vector3 displacementXZ = new Vector3(endPoint.x - startPoint.x, 0f, endPoint.z - startPoint.z);
+
+        Vector3 velocityY = Vector3.up * Mathf.Sqrt(-2 * gravity * trajectoryHeight);
+        Vector3 velocityXZ = displacementXZ / (Mathf.Sqrt(-2 * trajectoryHeight / gravity)
+            + Mathf.Sqrt(2 * (displacementY - trajectoryHeight) / gravity));
+
+        return velocityXZ + velocityY;
     }
 
     /*private void OnDrawGizmosSelected()

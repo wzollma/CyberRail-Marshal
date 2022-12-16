@@ -21,6 +21,9 @@ public class PlayerRbInput : MonoBehaviour
     public bool scopeDown { get { return Input.GetKeyDown(scopeKey); } }
     public bool scopeUp { get { return Input.GetKeyUp(scopeKey); } }
 
+    // grappling
+    public bool grappleDown { get { return Input.GetKeyDown(grappleKey); } }
+
     public bool isMovement { get { return moveInput.magnitude != 0;  } }
     public Vector2 moveInput { get { return curMoveInput; } }
 
@@ -34,6 +37,7 @@ public class PlayerRbInput : MonoBehaviour
     [SerializeField] KeyCode slideKey = KeyCode.LeftControl;
     [SerializeField] KeyCode shootKey = KeyCode.Mouse0;
     [SerializeField] KeyCode scopeKey = KeyCode.Mouse1;
+    [SerializeField] KeyCode grappleKey = KeyCode.Q;
 
     Vector2 curMoveInput;
     
