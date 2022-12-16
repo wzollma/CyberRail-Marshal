@@ -142,7 +142,7 @@ public class PlayerRbMovement : MonoBehaviour
 
     public void pressPlayerToGround()
     {
-        Debug.Log("force - being pressed to ground");
+        //Debug.Log("force - being pressed to ground");
         rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
     }
 
@@ -195,7 +195,7 @@ public class PlayerRbMovement : MonoBehaviour
     private void HandleInput()
     {
         // when to jump
-        if (readyToJump && ((grounded && input.isJump) || (!wallRunning && airJumpsLeft > 0 && input.jumpDown)))
+        if (((readyToJump && grounded && input.isJump) || (!wallRunning && airJumpsLeft > 0 && input.jumpDown)))
         {
             readyToJump = false;
 
@@ -312,7 +312,8 @@ public class PlayerRbMovement : MonoBehaviour
     void MovePlayer()
     {
         // turn gravity off while on slope
-        rb.useGravity = !OnSlope();
+        rb.useGravity = !(OnSlope() && grounded);
+        //Debug.Log($"{Time.time} - gravity? {rb.useGravity}");
 
         if (isState(MovementState.GRAPPLING))
             return;
@@ -395,11 +396,11 @@ public class PlayerRbMovement : MonoBehaviour
         }
         else
             processGetOutOfGrappleState();
-        Debug.Log($"jumpHeightMult: {heightMultiplier}");
+        //Debug.Log($"jumpHeightMult: {heightMultiplier}");
 
         if (!grounded)
             airJumpsLeft--;
-        Debug.Log($"airJump? {!grounded}");
+        //Debug.Log($"airJump? {!grounded}");
 
         exitingSlope = true;
 

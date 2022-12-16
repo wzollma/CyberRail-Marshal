@@ -1291,7 +1291,7 @@ GameObject:
   - component: {fileID: 1187241144}
   - component: {fileID: 1187241143}
   - component: {fileID: 1187241142}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: GFX
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1809,6 +1809,7 @@ MonoBehaviour:
   jumpForce: 19.5
   jumpCooldown: 0.25
   airMultiplier: 0.5
+  maxAirJumps: 1
   crouchSpeed: 3
   crouchYScale: 0.5
   playerHeight: 2
@@ -1882,6 +1883,7 @@ MonoBehaviour:
   wallJumpUpForce: 10.5
   wallJumpSideForce: 48
   maxWallRunTime: 1.5
+  minWallRunSpeed: 2
   wallCheckDistance: 1
   minJumpHeight: 2
   exitWallTime: 0.2

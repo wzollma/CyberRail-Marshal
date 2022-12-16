@@ -36,12 +36,12 @@ public class Shooting : MonoBehaviour
 
     public void Shoot(float maxDist, LayerMask shootLayers)
     {
-        Debug.Log("shoot");
+        //Debug.Log("shoot");
         curGun.ShootGFX();
         RaycastHit hit;
         if (Physics.Raycast(shootPos(), shootDirec(), out hit, maxDist, shootLayers))
         {
-            Debug.Log(hit.transform.gameObject.name);            
+            //Debug.Log(hit.transform.gameObject.name);
             curGun.hitGFX(hit.point);
         }
     }

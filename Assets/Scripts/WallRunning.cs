@@ -11,6 +11,7 @@ public class WallRunning : MonoBehaviour
     public float wallJumpUpForce;
     public float wallJumpSideForce;
     public float maxWallRunTime;
+    public float minWallRunSpeed = .5f;
     float wallRunTimer;
 
     [Header("Detection")]
@@ -98,12 +99,22 @@ public class WallRunning : MonoBehaviour
                 Collider wallToJumpOnCollider = wallRight ? rightWallHit.collider : leftWallHit.collider;
                 Vector3 wallToJumpOnNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
 
-                if (lastWallRunInfo != null && wallToJumpOnCollider != null && wallToJumpOnNormal != null && lastWallRunInfo.Equals(new WallRunInfo(wallToJumpOnCollider, wallToJumpOnNormal)))
-                //if (lastWallRunInfo != null && lastWallRunInfo.matchesWallCollider(wallToJumpOnCollider))
+                WallRunInfo newInfo = new WallRunInfo(wallToJumpOnCollider, wallToJumpOnNormal);
+                if (lastWallRunInfo != null && wallToJumpOnCollider != null && wallToJumpOnNormal != null && lastWallRunInfo.Equals(newInfo))
+                {
+                    //if (lastWallRunInfo != null && lastWallRunInfo.matchesWallCollider(wallToJumpOnCollider))
+                    //Debug.Log("same wall");
                     return;
+                }
+                else
+                {
+                    lastTimeWallRunning = Time.time;
+                    lastWallRunInfo = newInfo;
+                    //Debug.Log("not same wall");
+                }
 
                 StartWallRun();
-            }                
+            }
 
             // wallrun timer
             if (wallRunTimer > 0)
@@ -159,6 +170,7 @@ public class WallRunning : MonoBehaviour
     void WallRunningMovement()
     {
         rb.useGravity = false;
+        //Debug.Log($"{Time.time} - wallrunning, gravity? {rb.useGravity}");
         rb.velocity = Vector3.zero;//new Vector3(rb.velocity.x, 0f, rb.velocity.z);
 
         RaycastHit hitInfoToUse = wallRight ? rightWallHit : leftWallHit;
@@ -206,10 +218,10 @@ public class WallRunning : MonoBehaviour
     }
 
     bool isFastEnoughToWallRun()
-    {
-        float SPEED_EPSILON = 6f;
+    {        
         float velAbs = Mathf.Abs(movementScript.getFlatVelocity().magnitude);
-        return velAbs > SPEED_EPSILON;
+        //Debug.Log("fastEnoughToWallRun() - " + (velAbs > minWallRunSpeed));
+        return velAbs > minWallRunSpeed;
     }
 
     bool canAngleStayInWallRun(Vector3 wallNormal, Vector3 wallForward)
@@ -254,11 +266,12 @@ public class WallRunning : MonoBehaviour
 
     public bool isWallRunning()
     {
-        return (wallLeft || wallRight) && AboveGround() && !exitingWall && input.moveInput.magnitude > 0/* && input.moveInput.y > 0 && isFastEnoughToWallRun()*/;
+        return (wallLeft || wallRight) && AboveGround() && !exitingWall && input.moveInput.magnitude > 0 && isFastEnoughToWallRun();
     }
 
     public void resetLastWallRunInfo()
     {
+        //Debug.Log("reset wallRunInfo");
         lastWallRunInfo = null;
     }
 
@@ -296,7 +309,10 @@ public class WallRunInfo
 
         WallRunInfo other = obj as WallRunInfo;
 
-        return wallCollider.Equals(other.wallCollider) && wallNormal.Equals(other.wallNormal);
+        bool colEqual = wallCollider.Equals(other.wallCollider);
+        bool normalEqual = wallNormal.Equals(other.wallNormal);
+
+        return colEqual && normalEqual;
     }
 
     public override int GetHashCode()
