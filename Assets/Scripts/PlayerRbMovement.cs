@@ -195,7 +195,7 @@ public class PlayerRbMovement : MonoBehaviour
     private void HandleInput()
     {
         // when to jump
-        if (((readyToJump && grounded && input.isJump) || (!wallRunning && airJumpsLeft > 0 && input.jumpDown)))
+        if ((readyToJump && grounded && input.isJump) || (input.jumpDown && !wallRunning && (airJumpsLeft > 0 || (isState(MovementState.GRAPPLING) && grappleScript.canGrappleJump))))
         {
             readyToJump = false;
 
@@ -394,11 +394,11 @@ public class PlayerRbMovement : MonoBehaviour
             if (Time.time - timeGroundedSlideStarted >= .2f)
                 heightMultiplier *= 1.5f;
         }
-        else
-            processGetOutOfGrappleState();
+
+        processGetOutOfGrappleState();
         //Debug.Log($"jumpHeightMult: {heightMultiplier}");
 
-        if (!grounded)
+        if (!grounded && !(isState(MovementState.GRAPPLING) && grappleScript.canGrappleJump))
             airJumpsLeft--;
         //Debug.Log($"airJump? {!grounded}");
 
@@ -491,7 +491,7 @@ public class PlayerRbMovement : MonoBehaviour
     /// </summary>
     public void processGetOutOfGrappleState()
     {
-        if (isState(MovementState.GRAPPLING))
+        if (isState(MovementState.GRAPPLING) || activeGrapple)
         {
             grappleScript.stopGrapple();
             resetRestrictions();

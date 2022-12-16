@@ -16,6 +16,7 @@ public class Grappling : MonoBehaviour
     [SerializeField] float grappleDelayTime;
     [SerializeField] float overshootYAxis;
     public float RELEASE_EPSILON = 1;
+    public bool canGrappleJump = true;
 
     Vector3 grapplePoint;
 
