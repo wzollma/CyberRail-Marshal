@@ -95,7 +95,7 @@ public class Sliding : MonoBehaviour
                 newTargetFovInc = 0;
 
 
-            Debug.Log($"prev: {cam.getLastSetFovInc()}     new: {newTargetFovInc}     speed: {curSpeed}");
+            //Debug.Log($"prev: {cam.getLastSetFovInc()}     new: {newTargetFovInc}     speed: {curSpeed}");
 
             if (Mathf.Abs(newTargetFovInc - cam.getLastSetFovInc()) > fovChangeEpsilon)
                 cam.DoIncFov(newTargetFovInc);

@@ -217,7 +217,7 @@ public class WallRunning : MonoBehaviour
         return true;
     }
 
-    void StopWallRun()
+    public void StopWallRun()
     {
         //Debug.Log("StopWallRun()");
         movementScript.wallRunning = false;
@@ -231,6 +231,9 @@ public class WallRunning : MonoBehaviour
         // enter exiting wall state
         exitingWall = true;
         exitWallTimer = exitWallTime;
+
+        if (movementScript.isState(PlayerRbMovement.MovementState.GRAPPLING))
+            movementScript.processGetOutOfGrappleState();
 
         Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
 

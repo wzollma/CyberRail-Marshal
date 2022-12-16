@@ -6,6 +6,7 @@ using DG.Tweening;
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(PlayerRbInput))]
 [RequireComponent(typeof(Grappling))]
+[RequireComponent(typeof(WallRunning))]
 public class PlayerRbMovement : MonoBehaviour
 {
     public const float Y_VEL_EPSILON = .1f;
@@ -58,7 +59,7 @@ public class PlayerRbMovement : MonoBehaviour
     Grappling grappleScript;
 
     public MovementState state;
-    public enum MovementState { WALKING, SPRINTING, WALLRUNNING, CROUCHING, SLIDING, AIR }
+    public enum MovementState { WALKING, SPRINTING, WALLRUNNING, CROUCHING, SLIDING, GRAPPLING, AIR }
 
     public bool isSliding { get { return sliding; } } 
 
@@ -194,7 +195,7 @@ public class PlayerRbMovement : MonoBehaviour
     private void HandleInput()
     {
         // when to jump
-        if (readyToJump && ((grounded && input.isJump) || (airJumpsLeft > 0 && input.jumpDown)))
+        if (readyToJump && ((grounded && input.isJump) || (!wallRunning && airJumpsLeft > 0 && input.jumpDown)))
         {
             readyToJump = false;
 
@@ -218,7 +219,21 @@ public class PlayerRbMovement : MonoBehaviour
 
     void StateHandler()
     {
-        if (wallRunning) // Mode - Wallrunning
+        // Mode - Grappling
+        if (activeGrapple)
+        {
+            if (!isState(MovementState.GRAPPLING))
+            {
+                if (isState(MovementState.SLIDING) || sliding)
+                    StopSlide();
+
+                if (isState(MovementState.WALLRUNNING) || wallRunning)
+                    wallRunScript.StopWallRun();
+            }
+
+            state = MovementState.GRAPPLING;
+        }
+        else if (wallRunning) // Mode - Wallrunning
         {
             state = MovementState.WALLRUNNING;
             moveSpeed = wallRunScript.speedAtStartWallRun;
@@ -228,13 +243,15 @@ public class PlayerRbMovement : MonoBehaviour
         }        
         else if (sliding) // Mode - Sliding
         {
+            processGetOutOfGrappleState();
+
             // sets up sliding speed
             if (!isState(MovementState.SLIDING))
             {
                 state = MovementState.SLIDING;
 
                 moveSpeed = sprintSpeed;
-                setDesiredMoveSpeed(sprintSpeed);                
+                setDesiredMoveSpeed(sprintSpeed);     
             }
                         
             if (grounded) // increases speed on slopes, and decreases when not
@@ -244,6 +261,8 @@ public class PlayerRbMovement : MonoBehaviour
         }        
         else if (input.isCrouch) // Mode - Crouching
         {
+            processGetOutOfGrappleState();
+
             state = MovementState.CROUCHING;
             setDesiredMoveSpeed(crouchSpeed);
         }        
@@ -253,7 +272,7 @@ public class PlayerRbMovement : MonoBehaviour
 
             if (moveSpeed < sprintSpeed)
                 moveSpeed = sprintSpeed;
-            setDesiredMoveSpeed(sprintSpeed);            
+            setDesiredMoveSpeed(sprintSpeed);
         }
         else if (grounded) // Mode - Walking
         {
@@ -295,7 +314,7 @@ public class PlayerRbMovement : MonoBehaviour
         // turn gravity off while on slope
         rb.useGravity = !OnSlope();
 
-        if (activeGrapple)
+        if (isState(MovementState.GRAPPLING))
             return;
 
         // calc movement direction
@@ -335,7 +354,7 @@ public class PlayerRbMovement : MonoBehaviour
 
     void SpeedControl()
     {
-        if (activeGrapple)
+        if (isState(MovementState.GRAPPLING))
             return;
 
         // limiting speed on slope
@@ -374,16 +393,20 @@ public class PlayerRbMovement : MonoBehaviour
             if (Time.time - timeGroundedSlideStarted >= .2f)
                 heightMultiplier *= 1.5f;
         }
+        else
+            processGetOutOfGrappleState();
+        Debug.Log($"jumpHeightMult: {heightMultiplier}");
 
         if (!grounded)
             airJumpsLeft--;
+        Debug.Log($"airJump? {!grounded}");
 
         exitingSlope = true;
 
         // reset y velocity
         rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
 
-        //Debug.Log("force - jumping");
+        //Debug.Log("force - jumping");       
         rb.AddForce(transform.up * jumpForce * heightMultiplier, ForceMode.Impulse);
     }
 
@@ -460,6 +483,18 @@ public class PlayerRbMovement : MonoBehaviour
     public void resetRestrictions()
     {
         activeGrapple = false;
+    }
+
+    /// <summary>
+    /// Must be called before movementState is set to something else
+    /// </summary>
+    public void processGetOutOfGrappleState()
+    {
+        if (isState(MovementState.GRAPPLING))
+        {
+            grappleScript.stopGrapple();
+            resetRestrictions();
+        }
     }
 
     void OnCollisionEnter(Collision collision)
